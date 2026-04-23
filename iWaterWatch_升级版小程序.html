@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>iWaterWatch - 智能用水监测</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --navy:#0A1628; --blue:#0066FF; --cyan:#00D4FF; --teal:#00C9A7;
+  --orange:#FF6B35; --gold:#FFD700; --white:#FFFFFF; --gray:#8892A4; --light:#F0F4FF;
+}
+body { font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
+       background:var(--light); color:var(--navy); overflow-x:hidden; }
+.app { max-width:430px; margin:0 auto; background:var(--white); min-height:100vh; position:relative; }
+
+/* HEADER */
+.header { background:linear-gradient(135deg,var(--navy) 0%,#0D2150 100%);
+          padding:44px 20px 20px; position:relative; overflow:hidden; }
+.header::before { content:''; position:absolute; top:-40px; right:-40px;
+  width:180px; height:180px; border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,.15) 0%,transparent 70%); }
+.header-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.logo { display:flex; align-items:center; gap:8px; }
+.logo-text { font-size:18px; font-weight:800; color:var(--white); }
+.header-btns { display:flex; gap:8px; }
+.btn-proj { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700;
+            border:1px solid rgba(0,212,255,.4); background:rgba(0,212,255,.2);
+            color:var(--cyan); cursor:pointer; }
+.btn-demo { padding:5px 12px; border-radius:20px; font-size:11px; font-weight:700;
+            border:none; background:var(--orange); color:var(--white); cursor:pointer; }
+.device-row { display:flex; align-items:center; justify-content:space-between; }
+.device-info p:first-child { font-size:11px; color:var(--gray); margin-bottom:2px; }
+.device-info p:last-child { font-size:13px; color:var(--white); font-weight:600; }
+.status-pill { background:rgba(0,201,167,.2); border:1px solid var(--teal);
+               color:var(--teal); font-size:11px; font-weight:700;
+               padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:5px; }
+.dot { width:6px; height:6px; border-radius:50%; background:var(--teal); animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* FLOW CARD */
+.flow-card { margin:16px; border-radius:16px;
+             background:linear-gradient(135deg,var(--navy),#0D2150);
+             padding:20px; position:relative; overflow:hidden; }
+.flow-card::before { content:''; position:absolute; bottom:-20px; right:-20px;
+  width:120px; height:120px; border-radius:50%;
+  background:radial-gradient(circle,rgba(0,212,255,.1) 0%,transparent 70%); }
+.flow-label { font-size:11px; color:var(--gray); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.flow-row { display:flex; align-items:flex-end; justify-content:space-between; }
+.flow-num { font-size:48px; font-weight:900; color:var(--white); transition:color .5s; }
+.flow-unit { font-size:16px; color:var(--gray); margin-bottom:8px; margin-left:4px; }
+.flow-badge { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; align-self:flex-start; }
+.badge-idle { background:rgba(136,146,164,.15); color:var(--gray); border:1px solid rgba(136,146,164,.2); }
+.badge-active { background:rgba(0,212,255,.15); color:var(--cyan); border:1px solid rgba(0,212,255,.3); }
+.flow-sub { font-size:12px; color:var(--gray); margin-top:10px; }
+.flow-sub span { color:var(--cyan); font-weight:600; }
+
+/* CHART */
+.chart-wrap { margin:0 16px 16px; border-radius:16px; background:var(--white);
+              border:1px solid #E8ECF4; padding:16px; }
+.chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.chart-title { font-size:13px; font-weight:700; }
+.legend { display:flex; gap:12px; }
+.legend-item { display:flex; align-items:center; gap:4px; font-size:10px; color:var(--gray); }
+.legend-dot { width:8px; height:8px; border-radius:50%; }
+canvas { width:100%; height:120px; display:block; }
+
+/* STATS GRID */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 16px 16px; }
+.stat-card { border-radius:14px; padding:14px; background:var(--white);
+             border:1px solid #E8ECF4; position:relative; overflow:hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0;
+                     height:3px; border-radius:14px 14px 0 0; }
+.stat-card.c1::before{background:var(--blue)} .stat-card.c2::before{background:var(--teal)}
+.stat-card.c3::before{background:var(--orange)} .stat-card.c4::before{background:var(--gold)}
+.stat-label { font-size:10px; color:var(--gray); margin-bottom:6px; }
+.stat-val { font-size:22px; font-weight:800; }
+.stat-unit { font-size:11px; color:var(--gray); margin-left:2px; }
+.stat-chg { font-size:10px; margin-top:4px; color:var(--teal); }
+
+/* PREDICT */
+.predict-card { margin:0 16px 16px; border-radius:16px;
+                background:linear-gradient(135deg,#FFF8E8,#FFF3D5);
+                border:1px solid rgba(255,215,0,.3); padding:16px; }
+.predict-title { font-size:12px; font-weight:700; margin-bottom:12px; }
+.predict-row { display:flex; justify-content:space-between; align-items:center; }
+.predict-item { text-align:center; }
+.predict-num { font-size:20px; font-weight:800; }
+.predict-desc { font-size:10px; color:var(--gray); margin-top:2px; }
+
+/* COMPARE */
+.compare-card { margin:0 16px 16px; border-radius:16px; background:var(--white);
+                border:1px solid #E8ECF4; padding:16px; }
+.compare-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.compare-side { border-radius:12px; padding:12px; }
+.compare-before { background:#F5F5F5; }
+.compare-after { background:linear-gradient(135deg,rgba(0,102,255,.06),rgba(0,212,255,.06));
+                 border:1px solid rgba(0,212,255,.2); }
+.compare-tag { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;
+               display:inline-block; margin-bottom:8px; }
+.tag-before { background:#E5E5E5; color:#666; }
+.tag-after { background:rgba(0,212,255,.15); color:var(--blue); }
+.compare-item { font-size:11px; color:var(--gray); margin-bottom:5px; }
+
+/* ACHIEVEMENT */
+.achieve-card { margin:0 16px 16px; border-radius:16px;
+                background:linear-gradient(135deg,var(--navy),#0D2150); padding:16px; }
+.achieve-title { font-size:12px; font-weight:700; color:var(--white); margin-bottom:12px; }
+.achieve-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.achieve-item { text-align:center; background:rgba(255,255,255,.06); border-radius:10px; padding:10px 6px; }
+.achieve-icon { font-size:22px; margin-bottom:4px; }
+.achieve-num { font-size:13px; font-weight:800; color:var(--cyan); }
+.achieve-lbl { font-size:9px; color:var(--gray); margin-top:2px; }
+
+/* ALERTS */
+.alerts-card { margin:0 16px 16px; }
+.section-title { font-size:13px; font-weight:700; margin-bottom:10px; }
+.alert-item { border-radius:12px; padding:12px; margin-bottom:8px;
+              display:flex; align-items:flex-start; gap:10px; }
+.a-good { background:#E8FFF8; border-left:4px solid var(--teal); }
+.a-warn { background:#FFF3E0; border-left:4px solid var(--orange); }
+.a-info { background:#E8F5FF; border-left:4px solid var(--blue); }
+.a-danger { background:#FFE8E8; border-left:4px solid #F44336; animation:shake .4s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+.alert-ico { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+             justify-content:center; font-size:15px; flex-shrink:0; }
+.alert-body strong { font-size:12px; display:block; margin-bottom:2px; }
+.alert-body p { font-size:11px; color:var(--gray); line-height:1.5; }
+
+/* NEIGHBORS */
+.neighbor-card { margin:0 16px 16px; border-radius:16px; background:var(--white);
+                 border:1px solid #E8ECF4; padding:16px; }
+.neighbor-row { display:flex; align-items:center; gap:10px; padding:8px 0;
+                border-bottom:1px solid #F0F4FF; }
+.neighbor-row:last-child { border-bottom:none; }
+.nbr-rank { width:24px; height:24px; border-radius:50%; display:flex; align-items:center;
+            justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; }
+.r1{background:var(--gold);color:var(--navy)} .r2{background:#DDD;color:#555}
+.r3{background:#FFB74D;color:#fff} .rme{background:var(--blue);color:#fff}
+.nbr-name { flex:1; font-size:12px; font-weight:600; }
+.nbr-bar-bg { width:80px; background:#F0F4FF; border-radius:4px; height:6px; }
+.nbr-bar { height:6px; border-radius:4px; }
+.nbr-val { font-size:11px; color:var(--gray); width:42px; text-align:right; }
+
+/* DEVICE PAGE */
+.device-card { margin:0 16px 16px; border-radius:16px; background:var(--white);
+               border:1px solid #E8ECF4; padding:16px; }
+.dv-item { display:flex; align-items:center; gap:12px; padding:10px 0;
+           border-bottom:1px solid #F0F4FF; }
+.dv-item:last-child { border-bottom:none; }
+.dv-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.dv-online { background:var(--teal); box-shadow:0 0 6px rgba(0,201,167,.6); }
+.dv-low { background:var(--orange); }
+.dv-name { font-size:12px; font-weight:700; }
+.dv-meta { font-size:10px; color:var(--gray); margin-top:2px; }
+.dv-right { text-align:right; }
+.dv-signal { font-size:10px; color:var(--teal); }
+.dv-bat { font-size:10px; color:var(--gray); }
+
+/* VALVE CONTROL */
+.valve-card { margin:0 16px 16px; border-radius:16px;
+              background:linear-gradient(135deg,#FFF0F0,#FFE8E8);
+              border:1px solid rgba(244,67,54,.2); padding:16px; }
+.valve-title { font-size:12px; font-weight:700; margin-bottom:12px; }
+.valve-btn { width:100%; padding:14px; border-radius:12px; border:none; cursor:pointer;
+             font-size:14px; font-weight:800; transition:.3s; color:var(--white); }
+.v-open { background:linear-gradient(135deg,var(--teal),#00A896); }
+.v-closed { background:linear-gradient(135deg,#F44336,#D32F2F); }
+.valve-status { font-size:11px; margin-top:8px; text-align:center; color:var(--gray); }
+
+/* QR */
+.qr-card { margin:0 16px 16px; border-radius:16px; background:var(--white);
+           border:1px solid #E8ECF4; padding:20px; text-align:center; }
+.qr-box { width:120px; height:120px; margin:0 auto 12px; border-radius:12px;
+          background:var(--navy); display:flex; align-items:center; justify-content:center; padding:6px; }
+.qr-box svg { width:100%; height:100%; }
+
+/* SETTINGS */
+.settings-sect { margin:16px 16px 0; }
+.settings-lbl { font-size:11px; color:var(--gray); text-transform:uppercase;
+                letter-spacing:1px; margin-bottom:8px; padding-left:4px; }
+.settings-grp { background:var(--white); border-radius:14px; border:1px solid #E8ECF4;
+                overflow:hidden; margin-bottom:16px; }
+.s-row { display:flex; align-items:center; justify-content:space-between;
+         padding:14px 16px; border-bottom:1px solid #F0F4FF; }
+.s-row:last-child { border-bottom:none; }
+.s-row-left { display:flex; align-items:center; gap:10px; }
+.s-icon { width:32px; height:32px; border-radius:10px; display:flex; align-items:center;
+          justify-content:center; font-size:16px; }
+.s-name { font-size:13px; font-weight:600; }
+.s-desc { font-size:10px; color:var(--gray); margin-top:1px; }
+.toggle { width:42px; height:24px; border-radius:12px; background:#E0E0E0;
+          position:relative; cursor:pointer; transition:.3s; }
+.toggle.on { background:var(--blue); }
+.toggle::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px;
+                 border-radius:50%; background:var(--white); transition:.3s;
+                 box-shadow:0 1px 4px rgba(0,0,0,.2); }
+.toggle.on::after { left:21px; }
+
+/* NAV */
+.bottom-nav { position:sticky; bottom:0; background:var(--white);
+              border-top:1px solid #E8ECF4; display:flex;
+              box-shadow:0 -4px 20px rgba(0,0,0,.08); }
+.nav-btn { flex:1; padding:10px 0 6px; border:none; background:none; cursor:pointer;
+           display:flex; flex-direction:column; align-items:center; gap:3px;
+           font-size:10px; color:var(--gray); transition:.2s; }
+.nav-btn.active { color:var(--blue); }
+.nav-icon { font-size:22px; }
+
+/* PAGES */
+.page { display:none; padding-bottom:80px; }
+.page.active { display:block; animation:fadeUp .3s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6);
+                 z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:var(--white); border-radius:20px; padding:28px 24px;
+             width:85%; max-width:340px; text-align:center;
+             animation:popIn .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes popIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
+.m-icon { font-size:52px; margin-bottom:12px; }
+.m-title { font-size:18px; font-weight:800; color:#F44336; margin-bottom:8px; }
+.m-body { font-size:13px; color:var(--gray); line-height:1.7; margin-bottom:16px; }
+.m-detail { background:#FFF0F0; border-radius:10px; padding:12px; margin-bottom:16px;
+            font-size:12px; color:var(--navy); text-align:left; line-height:2.1; }
+.m-detail em { color:var(--orange); font-style:normal; font-weight:700; }
+.m-btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.m-btn { padding:12px; border-radius:12px; border:none; cursor:pointer;
+         font-size:13px; font-weight:700; transition:.2s; }
+.m-primary { background:var(--blue); color:var(--white); }
+.m-danger { background:#F44336; color:var(--white); }
+.m-btn:active { transform:scale(.97); }
+
+/* PROJECTION */
+.proj-overlay { display:none; position:fixed; inset:0;
+                background:linear-gradient(135deg,var(--navy),#0D2150);
+                z-index:200; flex-direction:column; align-items:center;
+                justify-content:center; color:var(--white); }
+.proj-overlay.show { display:flex; }
+.proj-logo { font-size:24px; font-weight:900; color:var(--cyan); margin-bottom:24px; }
+.proj-status { display:flex; align-items:center; gap:8px; margin-bottom:24px;
+               background:rgba(0,201,167,.12); border:1px solid rgba(0,201,167,.3);
+               padding:8px 20px; border-radius:30px; font-size:14px; color:var(--teal); }
+.proj-flow-big { font-size:72px; font-weight:900; color:var(--white); text-align:center; line-height:1; }
+.proj-flow-lbl { font-size:16px; color:var(--gray); text-align:center; margin:8px 0 24px; }
+.proj-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px;
+             width:90vw; max-width:860px; margin-bottom:28px; }
+.proj-stat { background:rgba(255,255,255,.06); border:1px solid rgba(0,212,255,.15);
+             border-radius:14px; padding:20px 12px; text-align:center; }
+.proj-num { font-size:36px; font-weight:900; color:var(--cyan); display:block; }
+.proj-lbl { font-size:12px; color:var(--gray); margin-top:4px; }
+.proj-close { background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+              color:var(--white); padding:10px 28px; border-radius:30px;
+              font-size:14px; font-weight:700; cursor:pointer; }
+
+/* DEMO BAR */
+.demo-bar-wrap { display:none; position:fixed; top:0; left:50%; transform:translateX(-50%);
+                 width:430px; max-width:100vw; z-index:50;
+                 background:rgba(10,22,40,.95); color:var(--white);
+                 padding:10px 20px; align-items:center; justify-content:space-between; }
+.demo-bar-wrap.show { display:flex; }
+.demo-progress-bar { width:90px; height:4px; background:rgba(255,255,255,.2); border-radius:2px; overflow:hidden; }
+.demo-fill { height:100%; background:var(--cyan); border-radius:2px; transition:.5s; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- DEMO BAR -->
+  <div class="demo-bar-wrap" id="demoBar">
+    <span id="demoLabel" style="font-size:12px">演示中...</span>
+    <div class="demo-progress-bar"><div class="demo-fill" id="demoFill" style="width:0%"></div></div>
+    <span id="demoStep" style="font-size:11px;color:var(--gray)">1/6</span>
+  </div>
+
+  <!-- LEAK MODAL -->
+  <div class="modal-overlay" id="leakModal">
+    <div class="modal-box">
+      <div class="m-icon">🚨</div>
+      <div class="m-title">检测到漏水警报！</div>
+      <div class="m-body">AI检测到凌晨异常持续水流，疑似漏水</div>
+      <div class="m-detail">
+        📍 位置：<em>客厅主水管</em><br>
+        ⏰ 时间：<em>凌晨 02:17</em><br>
+        💧 流量：<em>0.3 L/min（异常）</em><br>
+        ⚠️ 预计损失：<em>432 升/天</em>
+      </div>
+      <div class="m-btns">
+        <button class="m-btn m-danger" onclick="doRemoteClose()">🔴 远程关水</button>
+        <button class="m-btn m-primary" onclick="closeModal()">已知晓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECTION MODE -->
+  <div class="proj-overlay" id="projMode">
+    <div class="proj-logo">💧 iWaterWatch</div>
+    <div class="proj-status"><span class="dot"></span>设备在线 · 实时监测中</div>
+    <div class="proj-flow-big" id="projFlow">0.0</div>
+    <div class="proj-flow-lbl">L/min 实时流量</div>
+    <div class="proj-grid">
+      <div class="proj-stat"><span class="proj-num" id="pp1">45.2</span><div class="proj-lbl">今日用水(升)</div></div>
+      <div class="proj-stat"><span class="proj-num">1,280</span><div class="proj-lbl">本月用水(升)</div></div>
+      <div class="proj-stat"><span class="proj-num">¥38.4</span><div class="proj-lbl">本月花费</div></div>
+      <div class="proj-stat"><span class="proj-num">342</span><div class="proj-lbl">本月节省(升)</div></div>
+    </div>
+    <button class="proj-close" onclick="closeProj()">退出投影模式</button>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo"><span style="font-size:22px">💧</span><span class="logo-text">iWaterWatch</span></div>
+      <div class="header-btns">
+        <button class="btn-proj" onclick="openProj()">📺 投影</button>
+        <button class="btn-demo" onclick="startDemo()">▶ 演示</button>
+      </div>
+    </div>
+    <div class="device-row">
+      <div class="device-info">
+        <p>当前设备</p><p>客厅主水管 · WM2024001</p>
+      </div>
+      <div class="status-pill"><span class="dot"></span>在线</div>
+    </div>
+  </div>
+
+  <!-- PAGE: HOME -->
+  <div class="page active" id="page-home">
+    <div class="flow-card">
+      <div class="flow-label">⚡ 实时用水流量</div>
+      <div class="flow-row">
+        <div style="display:flex;align-items:baseline;gap:4px">
+          <span class="flow-num" id="flowNum">0.0</span>
+          <span class="flow-unit">L/min</span>
+        </div>
+        <span class="flow-badge badge-idle" id="flowBadge">暂无用水</span>
+      </div>
+      <div class="flow-sub">今日已用 <span id="todayNum">45.2</span> 升 · 本月花费 <span>¥38.4</span></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-header">
+        <span class="chart-title">📈 近7天用水趋势</span>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>本周</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#DDD"></div>上周</div>
+        </div>
+      </div>
+      <canvas id="chartCanvas"></canvas>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card c1">
+        <div class="stat-label">今日用水</div>
+        <div><span class="stat-val" id="sv1">45.2</span><span class="stat-unit">升</span></div>
+        <div class="stat-chg">↓ 12% vs 昨日</div>
+      </div>
+      <div class="stat-card c2">
+        <div class="stat-label">本月用水</div>
+        <div><span class="stat-val">1,280</span><span class="stat-unit">升</span></div>
+        <div class="stat-chg">↓ 15% vs 上月</div>
+      </div>
+      <div class="stat-card c3">
+        <div class="stat-label">本月花费</div>
+        <div><span class="stat-val">¥38.4</span></div>
+        <div class="stat-chg">↓ ¥6.9 vs 上月</div>
+      </div>
+      <div class="stat-card c4">
+        <div class="stat-label">节水成果</div>
+        <div><span class="stat-val">342</span><span class="stat-unit">升</span></div>
+        <div class="stat-chg">好于 85% 用户 🌱</div>
+      </div>
+    </div>
+
+    <div class="predict-card">
+      <div class="predict-title">🤖 AI 用水预测（本月）</div>
+      <div class="predict-row">
+        <div class="predict-item">
+          <div class="predict-num" style="color:var(--navy)">¥38.4</div>
+          <div class="predict-desc">当前实际</div>
+        </div>
+        <div style="font-size:18px;color:var(--gray)">→</div>
+        <div class="predict-item">
+          <div class="predict-num" style="color:var(--orange)">¥52.3</div>
+          <div class="predict-desc">按趋势预测</div>
+        </div>
+        <div style="font-size:18px;color:var(--gray)">→</div>
+        <div class="predict-item">
+          <div class="predict-num" style="color:var(--teal)">¥41.0</div>
+          <div class="predict-desc">节水后预测</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare-card">
+      <div class="section-title">📊 装前 vs 装后</div>
+      <div class="compare-row">
+        <div class="compare-side compare-before">
+          <span class="compare-tag tag-before">❌ 装前</span>
+          <div class="compare-item">📋 月底才知费用</div>
+          <div class="compare-item">🔍 无法发现漏水</div>
+          <div class="compare-item">💸 月均 ¥55.3</div>
+          <div class="compare-item">😰 漏水赔付风险</div>
+        </div>
+        <div class="compare-side compare-after">
+          <span class="compare-tag tag-after">✅ 装后</span>
+          <div class="compare-item">⚡ 实时用水监测</div>
+          <div class="compare-item">🚨 AI自动警报</div>
+          <div class="compare-item">💰 月均 ¥38.4</div>
+          <div class="compare-item">😊 完全掌控</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="achieve-card">
+      <div class="achieve-title">🏆 节水成就 · 本月贡献</div>
+      <div class="achieve-grid">
+        <div class="achieve-item">
+          <div class="achieve-icon">🌲</div>
+          <div class="achieve-num">3.4棵</div>
+          <div class="achieve-lbl">相当于种树</div>
+        </div>
+        <div class="achieve-item">
+          <div class="achieve-icon">🚿</div>
+          <div class="achieve-num">11次</div>
+          <div class="achieve-lbl">相当于淋浴</div>
+        </div>
+        <div class="achieve-item">
+          <div class="achieve-icon">💧</div>
+          <div class="achieve-num">684瓶</div>
+          <div class="achieve-lbl">矿泉水量</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alerts-card">
+      <div class="section-title">🔔 实时提醒</div>
+      <div id="alertList">
+        <div class="alert-item a-good">
+          <div class="alert-ico">✅</div>
+          <div class="alert-body"><strong>设备运行正常</strong><p>传感器信号优，电池92%，数据上传正常</p></div>
+        </div>
+        <div class="alert-item a-warn">
+          <div class="alert-ico">⚠️</div>
+          <div class="alert-body"><strong>潜在漏水风险</strong><p>昨晚凌晨检测到持续小流量，建议检查马桶</p></div>
+        </div>
+        <div class="alert-item a-info">
+          <div class="alert-ico">💡</div>
+          <div class="alert-body"><strong>节水建议</strong><p>早7-8点用水高峰，错峰可节水20%</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: STATS -->
+  <div class="page" id="page-stats">
+    <div class="neighbor-card" style="margin:16px 16px 0">
+      <div class="section-title">🏘️ 楼层用水排行榜</div>
+      <div class="neighbor-row">
+        <div class="nbr-rank r1">🥇</div>
+        <div class="nbr-name">501室</div>
+        <div class="nbr-bar-bg"><div class="nbr-bar" style="width:45%;background:var(--gold)"></div></div>
+        <div class="nbr-val" style="color:var(--gold)">580升</div>
+      </div>
+      <div class="neighbor-row">
+        <div class="nbr-rank r2">2</div>
+        <div class="nbr-name">503室</div>
+        <div class="nbr-bar-bg"><div class="nbr-bar" style="width:55%;background:#BBB"></div></div>
+        <div class="nbr-val">710升</div>
+      </div>
+      <div class="neighbor-row">
+        <div class="nbr-rank rme">我</div>
+        <div class="nbr-name" style="color:var(--blue)">502室（你）</div>
+        <div class="nbr-bar-bg"><div class="nbr-bar" style="width:62%;background:var(--blue)"></div></div>
+        <div class="nbr-val" style="color:var(--blue)">800升</div>
+      </div>
+      <div class="neighbor-row">
+        <div class="nbr-rank r3">4</div>
+        <div class="nbr-name">504室</div>
+        <div class="nbr-bar-bg"><div class="nbr-bar" style="width:88%;background:var(--orange)"></div></div>
+        <div class="nbr-val">1130升</div>
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-top:10px;text-align:center">
+        你比同楼层平均用水少 <span style="color:var(--teal);font-weight:700">18%</span> 🎉
+      </div>
+    </div>
+
+    <div class="device-card" style="margin-top:16px">
+      <div class="section-title">📅 月度对比</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div style="background:#F0F4FF;border-radius:10px;padding:12px">
+          <div style="font-size:16px;font-weight:800;color:var(--blue)">1,280</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:4px">4月(升)</div>
+        </div>
+        <div style="background:#F0F4FF;border-radius:10px;padding:12px">
+          <div style="font-size:16px;font-weight:800">1,510</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:4px">3月(升)</div>
+        </div>
+        <div style="background:#F0F4FF;border-radius:10px;padding:12px">
+          <div style="font-size:16px;font-weight:800">1,398</div>
+          <div style="font-size:10px;color:var(--gray);margin-top:4px">2月(升)</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px;background:#E8FFF8;border-radius:10px;font-size:12px">
+        💰 本月节省 <strong style="color:var(--teal)">¥6.9</strong>，
+        同比减少 <strong style="color:var(--teal)">230升</strong>
+      </div>
+    </div>
+
+    <div class="achieve-card" style="margin:16px">
+      <div class="achieve-title">🌍 累计节水贡献（安装至今）</div>
+      <div class="achieve-grid">
+        <div class="achieve-item">
+          <div class="achieve-icon">💧</div>
+          <div class="achieve-num">1,026升</div>
+          <div class="achieve-lbl">累计节水</div>
+        </div>
+        <div class="achieve-item">
+          <div class="achieve-icon">💰</div>
+          <div class="achieve-num">¥30.8</div>
+          <div class="achieve-lbl">累计节省</div>
+        </div>
+        <div class="achieve-item">
+          <div class="achieve-icon">🌳</div>
+          <div class="achieve-num">10.3棵</div>
+          <div class="achieve-lbl">相当于种树</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: DEVICE -->
+  <div class="page" id="page-device">
+    <div class="device-card" style="margin:16px 16px 0">
+      <div class="section-title">📡 设备管理</div>
+      <div class="dv-item">
+        <div class="dv-dot dv-online"></div>
+        <div style="flex:1"><div class="dv-name">客厅主水管</div><div class="dv-meta">WM2024001 · 2分钟前更新</div></div>
+        <div class="dv-right"><div class="dv-signal">信号优 -65dBm</div><div class="dv-bat">🔋 92%</div></div>
+      </div>
+      <div class="dv-item">
+        <div class="dv-dot dv-online"></div>
+        <div style="flex:1"><div class="dv-name">卫生间水管</div><div class="dv-meta">WM2024002 · 5分钟前更新</div></div>
+        <div class="dv-right"><div class="dv-signal">信号良 -72dBm</div><div class="dv-bat">🔋 85%</div></div>
+      </div>
+      <div class="dv-item">
+        <div class="dv-dot dv-low"></div>
+        <div style="flex:1"><div class="dv-name">厨房水管</div><div class="dv-meta">WM2024003 · 电量不足</div></div>
+        <div class="dv-right"><div class="dv-signal">信号优 -61dBm</div><div class="dv-bat" style="color:var(--orange)">🔋 18%</div></div>
+      </div>
+    </div>
+
+    <div class="valve-card" style="margin:16px">
+      <div class="valve-title">🔴 远程水阀控制</div>
+      <button class="valve-btn v-open" id="valveBtn" onclick="toggleValve()">💧 水阀已开启 · 点击关闭</button>
+      <div class="valve-status" id="valveStatus">⚠️ 发现漏水时，可远程一键关水，防止损失扩大</div>
+    </div>
+
+    <div class="qr-card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">📱 分享给家人</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:12px">扫码即可在自己手机上查看家庭用水</div>
+      <div class="qr-box">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="#0A1628"/>
+          <rect x="10" y="10" width="25" height="25" rx="2" fill="#00D4FF"/>
+          <rect x="14" y="14" width="17" height="17" rx="1" fill="#0A1628"/>
+          <rect x="18" y="18" width="9" height="9" rx="1" fill="#00D4FF"/>
+          <rect x="65" y="10" width="25" height="25" rx="2" fill="#00D4FF"/>
+          <rect x="69" y="14" width="17" height="17" rx="1" fill="#0A1628"/>
+          <rect x="73" y="18" width="9" height="9" rx="1" fill="#00D4FF"/>
+          <rect x="10" y="65" width="25" height="25" rx="2" fill="#00D4FF"/>
+          <rect x="14" y="69" width="17" height="17" rx="1" fill="#0A1628"/>
+          <rect x="18" y="73" width="9" height="9" rx="1" fill="#00D4FF"/>
+          <rect x="42" y="12" width="5" height="5" fill="#00D4FF"/>
+          <rect x="50" y="12" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="20" width="5" height="5" fill="#00D4FF"/>
+          <rect x="55" y="20" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="28" width="5" height="5" fill="#00D4FF"/>
+          <rect x="12" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="20" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="28" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="50" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="58" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="66" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="74" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="82" y="42" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="50" width="5" height="5" fill="#00D4FF"/>
+          <rect x="58" y="50" width="5" height="5" fill="#00D4FF"/>
+          <rect x="74" y="50" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="58" width="5" height="5" fill="#00D4FF"/>
+          <rect x="50" y="58" width="5" height="5" fill="#00D4FF"/>
+          <rect x="66" y="58" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="66" width="5" height="5" fill="#00D4FF"/>
+          <rect x="58" y="66" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="74" width="5" height="5" fill="#00D4FF"/>
+          <rect x="50" y="74" width="5" height="5" fill="#00D4FF"/>
+          <rect x="66" y="74" width="5" height="5" fill="#00D4FF"/>
+          <rect x="74" y="74" width="5" height="5" fill="#00D4FF"/>
+          <rect x="42" y="82" width="5" height="5" fill="#00D4FF"/>
+          <rect x="58" y="82" width="5" height="5" fill="#00D4FF"/>
+          <rect x="82" y="82" width="5" height="5" fill="#00D4FF"/>
+          <rect x="44" y="44" width="12" height="12" rx="2" fill="#0066FF"/>
+        </svg>
+      </div>
+      <div style="font-size:13px;font-weight:700">iWaterWatch</div>
+      <div style="font-size:11px;color:var(--gray)">家庭用水智能监测</div>
+    </div>
+  </div>
+
+  <!-- PAGE: SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="settings-sect">
+      <div class="settings-lbl">提醒设置</div>
+      <div class="settings-grp">
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#FFE8E8">🚨</div>
+            <div><div class="s-name">漏水警报推送</div><div class="s-desc">异常用水即时通知</div></div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#E8F5FF">📊</div>
+            <div><div class="s-name">每日用水报告</div><div class="s-desc">每晚9点推送日报</div></div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#E8FFF8">💡</div>
+            <div><div class="s-name">节水建议推荐</div><div class="s-desc">AI个性化方案</div></div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#FFF8E8">🏆</div>
+            <div><div class="s-name">邻居排行榜</div><div class="s-desc">每周更新，匿名对比</div></div>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+      <div class="settings-lbl">设备信息</div>
+      <div class="settings-grp">
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#F0F4FF">📱</div>
+            <div><div class="s-name">固件版本</div><div class="s-desc">v2.1.4 · 已是最新</div></div>
+          </div>
+          <span style="font-size:12px;color:var(--teal)">最新</span>
+        </div>
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#FFF8E8">🔋</div>
+            <div><div class="s-name">电池电量</div><div class="s-desc">预计还可使用2年4个月</div></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:var(--teal)">92%</span>
+        </div>
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#E8FFF8">📡</div>
+            <div><div class="s-name">NB-IoT 信号</div><div class="s-desc">-65dBm · 信号优</div></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:var(--teal)">优</span>
+        </div>
+      </div>
+      <div class="settings-lbl">关于</div>
+      <div class="settings-grp">
+        <div class="s-row">
+          <div class="s-row-left">
+            <div class="s-icon" style="background:#E8F5FF">ℹ️</div>
+            <div><div class="s-name">iWaterWatch v2.0</div><div class="s-desc">智能用水监测系统</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="switchPage('home',this)"><span class="nav-icon">🏠</span>首页</button>
+    <button class="nav-btn" onclick="switchPage('stats',this)"><span class="nav-icon">📊</span>统计</button>
+    <button class="nav-btn" onclick="switchPage('device',this)"><span class="nav-icon">📡</span>设备</button>
+    <button class="nav-btn" onclick="switchPage('settings',this)"><span class="nav-icon">⚙️</span>设置</button>
+  </div>
+</div>
+
+<script>
+// ── 页面切换
+function switchPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'home') drawChart();
+}
+
+// ── 流量模拟
+let todayUsage = 45.2;
+let isLeaking = false;
+let valveOpen = true;
+
+function updateFlow() {
+  if (!valveOpen) {
+    document.getElementById('flowNum').textContent = '0.0';
+    document.getElementById('flowBadge').textContent = '水阀已关';
+    document.getElementById('flowBadge').className = 'flow-badge badge-idle';
+    return;
+  }
+  const h = new Date().getHours();
+  let base = h>=6&&h<=8?4 : h>=11&&h<=13?2 : h>=18&&h<=22?3 : 0;
+  const flow = isLeaking ? 0.3 + Math.random()*.1
+               : (Math.random() > .65 ? base + Math.random()*2 : 0);
+  const d = flow.toFixed(1);
+  document.getElementById('flowNum').textContent = d;
+  document.getElementById('projFlow').textContent = d;
+  const badge = document.getElementById('flowBadge');
+  if (flow > 0) {
+    document.getElementById('flowNum').style.color = '#00D4FF';
+    badge.textContent = '用水中...'; badge.className = 'flow-badge badge-active';
+    todayUsage += flow * .05;
+    const t = todayUsage.toFixed(1);
+    document.getElementById('todayNum').textContent = t;
+    document.getElementById('sv1').textContent = t;
+    document.getElementById('pp1').textContent = t;
+  } else {
+    document.getElementById('flowNum').style.color = '#FFFFFF';
+    badge.textContent = '暂无用水'; badge.className = 'flow-badge badge-idle';
+  }
+}
+setInterval(updateFlow, 3000); updateFlow();
+
+// ── Canvas 折线图
+function drawChart() {
+  const canvas = document.getElementById('chartCanvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth, H = 120;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const thisW = [32,48,60,40,44,56,parseFloat(todayUsage.toFixed(1))];
+  const lastW = [38,55,65,50,52,62,58];
+  const labels = ['周一','周二','周三','周四','周五','周六','今日'];
+  const maxV = 80, pL=28, pR=8, pT=18, pB=22;
+  const cW = W-pL-pR, cH = H-pT-pB;
+
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#F0F4FF'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pT+cH*i/4; ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();}
+
+  const pts = (data) => data.map((v,i)=>({
+    x: pL + cW/(data.length-1)*i,
+    y: pT + cH*(1-v/maxV)
+  }));
+
+  // 上周虚线
+  const lpPts = pts(lastW);
+  ctx.beginPath(); ctx.strokeStyle='#DDD'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]);
+  lpPts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 本周填充
+  const twPts = pts(thisW);
+  const grad = ctx.createLinearGradient(0,pT,0,pT+cH);
+  grad.addColorStop(0,'rgba(0,102,255,0.18)'); grad.addColorStop(1,'rgba(0,102,255,0)');
+  ctx.beginPath(); ctx.moveTo(twPts[0].x,pT+cH);
+  twPts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(twPts[twPts.length-1].x,pT+cH); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle='#0066FF'; ctx.lineWidth=2.5; ctx.lineJoin='round';
+  twPts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+
+  twPts.forEach((p,i)=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,i===6?5:3,0,Math.PI*2);
+    ctx.fillStyle='#0066FF'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+
+  ctx.fillStyle='#8892A4'; ctx.font=`9px sans-serif`; ctx.textAlign='center';
+  labels.forEach((l,i)=>{ctx.fillText(l, pL+cW/(labels.length-1)*i, H-4);});
+}
+window.addEventListener('load', drawChart);
+window.addEventListener('resize', drawChart);
+
+// ── 漏水弹窗
+function showLeakAlert() { document.getElementById('leakModal').classList.add('show'); isLeaking=true; updateFlow(); }
+function closeModal() { document.getElementById('leakModal').classList.remove('show'); }
+function doRemoteClose() {
+  closeModal(); valveOpen=false; isLeaking=false;
+  const btn=document.getElementById('valveBtn');
+  btn.textContent='🔴 水阀已关闭 · 点击开启'; btn.className='valve-btn v-closed';
+  document.getElementById('valveStatus').textContent='✅ 水阀已远程关闭，漏水已阻止';
+  const d=document.createElement('div');
+  d.className='alert-item a-danger';
+  d.innerHTML=`<div class="alert-ico">🔴</div><div class="alert-body"><strong>水阀已远程关闭</strong><p>凌晨漏水警报已处理，预计节省432升</p></div>`;
+  document.getElementById('alertList').prepend(d);
+  updateFlow();
+}
+
+// ── 水阀切换
+function toggleValve() {
+  valveOpen=!valveOpen;
+  const btn=document.getElementById('valveBtn');
+  if(valveOpen){
+    btn.textContent='💧 水阀已开启 · 点击关闭'; btn.className='valve-btn v-open';
+    document.getElementById('valveStatus').textContent='⚠️ 发现漏水时，可远程一键关水';
+    isLeaking=false;
+  } else {
+    btn.textContent='🔴 水阀已关闭 · 点击开启'; btn.className='valve-btn v-closed';
+    document.getElementById('valveStatus').textContent='✅ 水阀已关闭，用水已停止';
+  }
+  updateFlow();
+}
+
+// ── 投影模式
+function openProj() { document.getElementById('projMode').classList.add('show'); }
+function closeProj() { document.getElementById('projMode').classList.remove('show'); }
+
+// ── 引导演示
+const steps = [
+  { label:'① 正常用水监测中...', fn:()=>{ switchPage('home', document.querySelectorAll('.nav-btn')[0]); } },
+  { label:'② AI检测到凌晨异常水流', fn:()=>{ isLeaking=true; updateFlow(); } },
+  { label:'③ 🚨 漏水警报弹出！', fn:()=>{ showLeakAlert(); } },
+  { label:'④ 远程关水 · 阻止损失', fn:()=>{ doRemoteClose(); } },
+  { label:'⑤ 查看节水排行榜', fn:()=>{ switchPage('stats', document.querySelectorAll('.nav-btn')[1]); } },
+  { label:'✅ 演示完成！', fn:()=>{ document.getElementById('demoBar').classList.remove('show'); } },
+];
+let stepIdx=0, demoTimer=null;
+
+function startDemo() {
+  stepIdx=0; isLeaking=false; valveOpen=true;
+  const btn=document.getElementById('valveBtn');
+  btn.textContent='💧 水阀已开启 · 点击关闭'; btn.className='valve-btn v-open';
+  document.getElementById('demoBar').classList.add('show');
+  runStep();
+}
+function runStep() {
+  if(stepIdx>=steps.length){ document.getElementById('demoBar').classList.remove('show'); return; }
+  const s=steps[stepIdx];
+  document.getElementById('demoLabel').textContent=s.label;
+  document.getElementById('demoStep').textContent=`${stepIdx+1}/${steps.length}`;
+  document.getElementById('demoFill').style.width=`${(stepIdx+1)/steps.length*100}%`;
+  s.fn(); stepIdx++;
+  if(stepIdx<steps.length) demoTimer=setTimeout(runStep,2800);
+}
+</script>
+</body>
+</html>
